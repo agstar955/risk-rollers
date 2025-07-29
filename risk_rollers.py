@@ -6,7 +6,7 @@ import os
 pygame.init()
 
 # 프로그램 아이콘 설정
-icon = pygame.image.load(os.path.join("dice_images", "risk-rollers.png"))
+icon = pygame.image.load(os.path.join("src", "risk-rollers.png"))
 pygame.display.set_icon(icon)
 
 # 화면 설정
@@ -34,18 +34,18 @@ QUIT_BUTTON = pygame.Rect(400, 400, 100, 40)
 dice_config = {
     "Balanced":   {"faces":[1,2,3,4,5,6],    "max_rolls":6, "description":"기본형. 균형 분포."},
     "Aggressive": {"faces":[1,1,4,5,6,6],    "max_rolls":7, "description":"고점수 확률 ↑."},
-    "Safe":       {"faces":[2,2,3,3,4,4],    "max_rolls":5, "description":"2 연속 2회 실패."},
-    "Risky":      {"faces":[1,1,6,6,6,6],    "max_rolls":6, "description":"실패 시 -10 점."},
+    "Safe":       {"faces":[2,2,3,3,3,3],    "max_rolls":5, "description":"2 연속 2회 실패."},
+    "Risky":      {"faces":[1,6,6,6,6,6],    "max_rolls":6, "description":"실패 시 -6 점."},
 }
 
 # 사용 가능한 효과 종류 (desc 제거)
 EFFECTS = ["+5점", "강탈 3점", "상대 -5점"]
 
-# 효과별 아이콘 로딩 (dice_images/effect/<파일>.png)
+# 효과별 아이콘 로딩 (src/effect/<파일>.png)
 effect_icons = {
-    "+5점": pygame.transform.scale(pygame.image.load(os.path.join("dice_images", "effect", "plus.png")), (36,36)),
-    "강탈 3점": pygame.transform.scale(pygame.image.load(os.path.join("dice_images", "effect", "steal.png")), (36,36)),
-    "상대 -5점": pygame.transform.scale(pygame.image.load(os.path.join("dice_images", "effect", "minus.png")), (36,36)),
+    "+5점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "plus.png")), (36,36)),
+    "강탈 3점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "steal.png")), (36,36)),
+    "상대 -5점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "minus.png")), (36,36)),
 }
 
 # dice_types 리스트 자동 생성 (faces_info에 value, image, effect 저장)
@@ -54,7 +54,7 @@ for name, cfg in dice_config.items():
     entry = {"name": name, "max_rolls": cfg["max_rolls"], "description": cfg["description"], "faces_info": []}
     key = name.lower()
     for face_value in cfg["faces"]:
-        img_path = os.path.join("dice_images", key, f"dice{face_value}.png")
+        img_path = os.path.join("src", key, f"dice{face_value}.png")
         img = pygame.transform.scale(pygame.image.load(img_path), (36,36))
         entry["faces_info"].append({"value": face_value, "image": img, "effect": None})
     dice_types.append(entry)
@@ -159,7 +159,8 @@ def select_dice(player_idx):
                 for i in range(n):
                     bx = start_x + i*(BOX_W+SP)
                     if pygame.Rect(bx,by,BOX_W,BOX_H).collidepoint(e.pos):
-                        return dice_types[i]
+                        selected_dice = dice_types[i].copy()
+                        return selected_dice
         clock.tick(30)
 
 def switch_player():
@@ -179,14 +180,7 @@ def roll_dice():
     info = random.choice(ps["dice"]["faces_info"])
     rolled_face_info = info
     face = info["value"]
-    if ps["dice"]["name"]=="Safe":
-        if face==1 or (face==2 and ps["last_roll"]==2):
-            turn_score=0; switch_player(); return
-        ps["last_roll"]=face
-    elif face==1:
-        if ps["dice"]["name"]=="Risky":
-            ps["score"]=max(ps["score"]-10,0)
-        turn_score=0; switch_player(); return
+
     # effect 적용
     eff = info["effect"]
     if eff == "+5점":
@@ -199,6 +193,15 @@ def roll_dice():
     elif eff == "상대 -5점":
         op = player_states[1-current_player]
         op["score"] = max(0, op["score"]-5)
+
+    if ps["dice"]["name"]=="Safe":
+        if face==1 or (face==2 and ps["last_roll"]==2):
+            turn_score=0; switch_player(); return
+        ps["last_roll"]=face
+    elif face==1:
+        if ps["dice"]["name"]=="Risky":
+            ps["score"]=max(ps["score"]-6,0)
+        turn_score=0; switch_player(); return
     turn_score += face
 
 def hold():
@@ -206,7 +209,7 @@ def hold():
     ps = player_states[current_player]
     ps["score"] += turn_score
     new_thresh = ps["score"]//20
-    if new_thresh > ps["threshold"]:
+    if new_thresh > ps["threshold"] and ps["score"]<100:
         ps["threshold"] = new_thresh
         opponent = 1 - current_player
         eff = choose_effect(opponent)
