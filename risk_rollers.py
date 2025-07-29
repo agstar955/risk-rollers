@@ -39,7 +39,7 @@ dice_config = {
 }
 
 # 사용 가능한 효과 종류
-EFFECTS = [["plus","+2점"], ["steal","1점 강탈"], ["minus","상대 -2점"], ["bonus","턴 점수 +3"],["addroll","롤 횟수 +1"]]
+EFFECTS = [["plus","+2"], ["steal","1점 강탈"], ["minus","상대 -2점"], ["bonus","턴 점수 +3"],["addroll","롤 횟수 +1"]]
 
 # 효과별 아이콘 로딩 (src/effect/<파일>.png)
 effect_icons = {
@@ -186,15 +186,15 @@ def roll_dice():
     # effect 적용
     eff = info["effect"]
     if eff == "plus":
-        ps["score"] += 5
+        ps["score"] += 2
     elif eff == "steal":
         op = player_states[1-current_player]
-        steal = min(3, op["score"])
+        steal = min(1, op["score"])
         op["score"] -= steal
         ps["score"] += steal
     elif eff == "minus":
         op = player_states[1-current_player]
-        op["score"] = max(0, op["score"]-5)
+        op["score"] = max(0, op["score"]-2)
     elif eff == "bonus":
         turn_score += 3
     elif eff == "addroll":
