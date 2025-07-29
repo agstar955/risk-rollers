@@ -39,13 +39,15 @@ dice_config = {
 }
 
 # 사용 가능한 효과 종류
-EFFECTS = [["plus","+5점"], ["steal","3점 강탈"], ["minus","상대 -5점"]]
+EFFECTS = [["plus","+2점"], ["steal","1점 강탈"], ["minus","상대 -2점"], ["bonus","턴 점수 +3"],["addroll","롤 횟수 +1"]]
 
 # 효과별 아이콘 로딩 (src/effect/<파일>.png)
 effect_icons = {
     "plus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "plus.png")), (36,36)),
     "steal": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "steal.png")), (36,36)),
     "minus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "minus.png")), (36,36)),
+    "bonus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "bonus.png")), (36,36)),
+    "addroll": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "addroll.png")), (36,36)),
 }
 
 # dice_types 리스트 자동 생성 (faces_info에 value, image, effect 저장)
@@ -193,6 +195,10 @@ def roll_dice():
     elif eff == "minus":
         op = player_states[1-current_player]
         op["score"] = max(0, op["score"]-5)
+    elif eff == "bonus":
+        turn_score += 3
+    elif eff == "addroll":
+        ps["roll_count"] -= 1
 
     if ps["dice"]["name"]=="Safe":
         if face==1 or (face==2 and ps["last_roll"]==2):
