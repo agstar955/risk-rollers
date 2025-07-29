@@ -38,14 +38,14 @@ dice_config = {
     "Risky":      {"faces":[1,6,6,6,6,6],    "max_rolls":6, "description":"실패 시 -6 점."},
 }
 
-# 사용 가능한 효과 종류 (desc 제거)
-EFFECTS = ["+5점", "강탈 3점", "상대 -5점"]
+# 사용 가능한 효과 종류
+EFFECTS = [["plus","+5점"], ["steal","3점 강탈"], ["minus","상대 -5점"]]
 
 # 효과별 아이콘 로딩 (src/effect/<파일>.png)
 effect_icons = {
-    "+5점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "plus.png")), (36,36)),
-    "강탈 3점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "steal.png")), (36,36)),
-    "상대 -5점": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "minus.png")), (36,36)),
+    "plus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "plus.png")), (36,36)),
+    "steal": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "steal.png")), (36,36)),
+    "minus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "minus.png")), (36,36)),
 }
 
 # dice_types 리스트 자동 생성 (faces_info에 value, image, effect 저장)
@@ -86,7 +86,7 @@ def choose_effect(player_idx):
             x = WIDTH//2 - BOX_W - SP//2 + i*(BOX_W+SP)
             rect = pygame.Rect(x, y, BOX_W, BOX_H)
             pygame.draw.rect(screen, GRAY, rect, border_radius=6)
-            draw_text(opt, x+10, y+30)  # 효과 이름만 표시
+            draw_text(opt[1], x+10, y+30)  # 효과 이름만 표시
         pygame.display.flip()
         for e in pygame.event.get():
             if e.type==pygame.QUIT:
@@ -183,14 +183,14 @@ def roll_dice():
 
     # effect 적용
     eff = info["effect"]
-    if eff == "+5점":
+    if eff == "plus":
         ps["score"] += 5
-    elif eff == "강탈 3점":
+    elif eff == "steal":
         op = player_states[1-current_player]
         steal = min(3, op["score"])
         op["score"] -= steal
         ps["score"] += steal
-    elif eff == "상대 -5점":
+    elif eff == "minus":
         op = player_states[1-current_player]
         op["score"] = max(0, op["score"]-5)
 
@@ -213,7 +213,7 @@ def hold():
         ps["threshold"] = new_thresh
         opponent = 1 - current_player
         eff = choose_effect(opponent)
-        choose_face_effect(opponent, eff)
+        choose_face_effect(opponent, eff[0])
     if ps["score"]>=100:
         game_over = True
     else:
