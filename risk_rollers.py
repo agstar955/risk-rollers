@@ -9,8 +9,8 @@ pygame.init()
 icon = pygame.image.load(os.path.join("src", "risk-rollers.png"))
 pygame.display.set_icon(icon)
 
-# 화면 설정
-WIDTH, HEIGHT = 700, 500
+# 화면 설정 (크기 조절)
+WIDTH, HEIGHT = 800, 700
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Risk Rollers")
 font = pygame.font.SysFont("malgungothic", 20)
@@ -26,48 +26,41 @@ BLUE  = (80,80,255)
 GREEN = (0,200,0)
 
 # 버튼
-ROLL_BUTTON = pygame.Rect(100, 400, 100, 40)
-HOLD_BUTTON = pygame.Rect(250, 400, 100, 40)
-QUIT_BUTTON = pygame.Rect(400, 400, 100, 40)
+ROLL_BUTTON = pygame.Rect(100, 600, 100, 40)
+HOLD_BUTTON = pygame.Rect(300, 600, 100, 40)
+QUIT_BUTTON = pygame.Rect(500, 600, 100, 40)
 
-# ─── 주사위 및 효과 설정 ─────────────────────────────────────────────
+# ─── 주사위 및 효과 설정 (생략: 기존 코드와 동일) ─────────────────────────────
 dice_config = {
     "Balanced":   {"faces":[1,2,3,4,5,6],    "max_rolls":6, "description":"기본형. 균형 분포."},
-    "Aggressive": {"faces":[1,1,4,5,6,6],    "max_rolls":7, "description":"고점수 확률 ↑."},
+    "Aggressive": {"faces":[1,1,5,6,6,6],    "max_rolls":7, "description":"고점수 확률 ↑."},
     "Safe":       {"faces":[2,2,3,3,3,3],    "max_rolls":5, "description":"2 연속 2회 실패."},
-    "Risky":      {"faces":[1,6,6,6,6,6],    "max_rolls":6, "description":"실패 시 -6 점."},
+    "Coin":      {"faces":[1,1,1,6,6,6],    "max_rolls":6, "description":""},
+    "Slot":       {"faces":[1,2,2,2,3,3],    "max_rolls":7, "description":"연속 3번 점수+"},
 }
-
-# 사용 가능한 효과 종류
 EFFECTS = [["plus","+2"], ["steal","1점 강탈"], ["minus","상대 -2점"], ["bonus","턴 점수 +3"],["addroll","롤 횟수 +1"]]
-
-# 효과별 아이콘 로딩 (src/effect/<파일>.png)
 effect_icons = {
-    "plus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "plus.png")), (36,36)),
-    "steal": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "steal.png")), (36,36)),
-    "minus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "minus.png")), (36,36)),
-    "bonus": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "bonus.png")), (36,36)),
-    "addroll": pygame.transform.scale(pygame.image.load(os.path.join("src", "effect", "addroll.png")), (36,36)),
+    "plus":      pygame.transform.scale(pygame.image.load(os.path.join("src","effect","plus.png")),      (36,36)),
+    "steal":     pygame.transform.scale(pygame.image.load(os.path.join("src","effect","steal.png")),     (36,36)),
+    "minus":     pygame.transform.scale(pygame.image.load(os.path.join("src","effect","minus.png")),     (36,36)),
+    "bonus":     pygame.transform.scale(pygame.image.load(os.path.join("src","effect","bonus.png")),     (36,36)),
+    "addroll":   pygame.transform.scale(pygame.image.load(os.path.join("src","effect","addroll.png")),   (36,36)),
 }
-
-# dice_types 리스트 자동 생성 (faces_info에 value, image, effect 저장)
 dice_types = []
 for name, cfg in dice_config.items():
-    entry = {"name": name, "max_rolls": cfg["max_rolls"], "description": cfg["description"], "faces_info": []}
+    entry = {"name":name,"max_rolls":cfg["max_rolls"],"description":cfg["description"],"faces_info":[]}
     key = name.lower()
     for face_value in cfg["faces"]:
         img_path = os.path.join("src", key, f"dice{face_value}.png")
         img = pygame.transform.scale(pygame.image.load(img_path), (36,36))
-        entry["faces_info"].append({"value": face_value, "image": img, "effect": None})
+        entry["faces_info"].append({"value":face_value, "image":img, "effect":None})
     dice_types.append(entry)
 # ────────────────────────────────────────────────────────────────────
 
-# 플레이어 상태 리스트
 player_states = [
-    {"dice": None, "score":0, "roll_count":0, "last_roll":None, "threshold":0},
-    {"dice": None, "score":0, "roll_count":0, "last_roll":None, "threshold":0}
+    {"dice":None,"score":0,"roll_count":0,"last_roll":None,"last_last_roll":None,"threshold":0},
+    {"dice":None,"score":0,"roll_count":0,"last_roll":None,"last_last_roll":None,"threshold":0}
 ]
-
 turn_score = 0
 current_player = 0
 rolled_face_info = None
@@ -77,76 +70,80 @@ def draw_text(txt, x, y, col=BLACK, f=font):
     screen.blit(f.render(txt, True, col), (x,y))
 
 def choose_effect(player_idx):
+    # 기존 choose_effect 구현
     options = random.sample(EFFECTS, 2)
     BOX_W, BOX_H, SP = 300, 80, 20
-    y = 200
+    y = 250
     while True:
         screen.fill(WHITE)
         pygame.draw.rect(screen, RED if player_idx==0 else BLUE, (0,0,WIDTH,80))
         draw_text(f"Player {player_idx+1}: 효과 선택", WIDTH//2-100,30,WHITE, large_font)
         for i, opt in enumerate(options):
             x = WIDTH//2 - BOX_W - SP//2 + i*(BOX_W+SP)
-            rect = pygame.Rect(x, y, BOX_W, BOX_H)
-            pygame.draw.rect(screen, GRAY, rect, border_radius=6)
-            draw_text(opt[1], x+10, y+30)  # 효과 이름만 표시
+            rect = pygame.Rect(x,y,BOX_W,BOX_H)
+            pygame.draw.rect(screen,GRAY,rect, border_radius=6)
+            draw_text(opt[1], x+10, y+30)
         pygame.display.flip()
         for e in pygame.event.get():
-            if e.type==pygame.QUIT:
-                pygame.quit(); sys.exit()
-            if e.type==pygame.KEYDOWN and e.key in (pygame.K_1, pygame.K_2):
+            if e.type==pygame.QUIT: pygame.quit(); sys.exit()
+            if e.type==pygame.KEYDOWN and e.key in (pygame.K_1,pygame.K_2):
                 return options[0] if e.key==pygame.K_1 else options[1]
             if e.type==pygame.MOUSEBUTTONDOWN:
                 for i in range(2):
                     x = WIDTH//2 - BOX_W - SP//2 + i*(BOX_W+SP)
-                    if pygame.Rect(x, y, BOX_W, BOX_H).collidepoint(e.pos):
+                    if pygame.Rect(x,y,BOX_W,BOX_H).collidepoint(e.pos):
                         return options[i]
         clock.tick(30)
 
 def choose_face_effect(player_idx, effect):
+    # 기존 choose_face_effect 구현
     ps = player_states[player_idx]
     faces_info = ps["dice"]["faces_info"]
-    BOX_W, BOX_H, SP = 80, 80, 20
+    BOX_W, BOX_H, SP = 80,80,20
     total_w = len(faces_info)*BOX_W + (len(faces_info)-1)*SP
-    start_x = (WIDTH-total_w)//2
-    y = 150
+    start_x = (WIDTH - total_w)//2
+    y = 200
     while True:
         screen.fill(WHITE)
         pygame.draw.rect(screen, RED if player_idx==0 else BLUE, (0,0,WIDTH,80))
         draw_text("효과 적용할 면 선택", WIDTH//2-100,30,WHITE, large_font)
         for i, face_info in enumerate(faces_info):
             x = start_x + i*(BOX_W+SP)
-            rect = pygame.Rect(x, y, BOX_W, BOX_H)
-            pygame.draw.rect(screen, GRAY, rect, border_radius=6)
-            screen.blit(face_info["image"], (x+10, y+10))
+            rect = pygame.Rect(x,y,BOX_W,BOX_H)
+            pygame.draw.rect(screen,GRAY,rect, border_radius=6)
+            screen.blit(face_info["image"], (x+10,y+10))
             if face_info["effect"]:
-                # 기존 이미지 위에 효과 아이콘 오버레이
-                screen.blit(effect_icons[face_info["effect"]], (x+10, y+10))
+                screen.blit(effect_icons[face_info["effect"]], (x+10,y+10))
         pygame.display.flip()
         for e in pygame.event.get():
-            if e.type==pygame.QUIT:
-                pygame.quit(); sys.exit()
+            if e.type==pygame.QUIT: pygame.quit(); sys.exit()
             if e.type==pygame.MOUSEBUTTONDOWN:
                 for i, face_info in enumerate(faces_info):
                     x = start_x + i*(BOX_W+SP)
-                    if pygame.Rect(x, y, BOX_W, BOX_H).collidepoint(e.pos):
+                    if pygame.Rect(x,y,BOX_W,BOX_H).collidepoint(e.pos):
                         face_info["effect"] = effect
                         return
         clock.tick(30)
 
 def select_dice(player_idx):
-    BOX_W, BOX_H, SP = 150, 240, 20
+    BOX_W, BOX_H, SP = 150,240,20
     n = len(dice_types)
-    total_w = n*BOX_W + (n-1)*SP
-    start_x = (WIDTH-total_w)//2
-    by = 100
+    num_per_row = (n + 1)//2
+    total_w = num_per_row*BOX_W + (num_per_row-1)*SP
+    start_x = (WIDTH - total_w)//2
+    first_y = 150
+    second_y = first_y + BOX_H + SP
     color = RED if player_idx==0 else BLUE
     while True:
         screen.fill(WHITE)
         pygame.draw.rect(screen, color, (0,0,WIDTH,80))
         draw_text(f"Player {player_idx+1} 주사위 선택", WIDTH//2-100,30,WHITE,large_font)
         for i, d in enumerate(dice_types):
-            bx = start_x + i*(BOX_W+SP)
-            pygame.draw.rect(screen, GRAY, (bx,by,BOX_W,BOX_H), border_radius=6)
+            row = i // num_per_row
+            col = i % num_per_row
+            bx = start_x + col*(BOX_W+SP)
+            by = first_y if row==0 else second_y
+            pygame.draw.rect(screen,GRAY,(bx,by,BOX_W,BOX_H),border_radius=6)
             draw_text(d["name"], bx+8, by+8)
             draw_text(d["description"], bx+8, by+32)
             for j, face_info in enumerate(d["faces_info"]):
@@ -155,13 +152,15 @@ def select_dice(player_idx):
                 screen.blit(face_info["image"], (ix, iy))
         pygame.display.flip()
         for e in pygame.event.get():
-            if e.type==pygame.QUIT:
-                pygame.quit(); sys.exit()
+            if e.type==pygame.QUIT: pygame.quit(); sys.exit()
             if e.type==pygame.MOUSEBUTTONDOWN:
                 for i in range(n):
-                    bx = start_x + i*(BOX_W+SP)
+                    row = i // num_per_row
+                    col = i % num_per_row
+                    bx = start_x + col*(BOX_W+SP)
+                    by = first_y if row==0 else second_y
                     if pygame.Rect(bx,by,BOX_W,BOX_H).collidepoint(e.pos):
-                        selected_dice = dice_types[i].copy()
+                        selected_dice=dice_types[i].copy()
                         return selected_dice
         clock.tick(30)
 
@@ -172,6 +171,7 @@ def switch_player():
     ps = player_states[current_player]
     ps["roll_count"] = 0
     ps["last_roll"] = None
+    ps["last_last_roll"] = None
 
 def roll_dice():
     global rolled_face_info, turn_score, game_over
@@ -204,9 +204,23 @@ def roll_dice():
         if face==1 or (face==2 and ps["last_roll"]==2):
             turn_score=0; switch_player(); return
         ps["last_roll"]=face
+    elif ps["dice"]["name"]=="Coin":
+        if face==1:
+            turn_score=0; switch_player(); return
+        turn_score += 4
+    elif ps["dice"]["name"]=="Slot":
+        if face==1:
+            turn_score=0; switch_player(); return
+        else:
+            if ps["last_last_roll"]==ps["last_roll"]==face:
+                if face==2:
+                    turn_score += 5
+                elif face==3:
+                    turn_score += 10
+            ps["last_last_roll"]=ps["last_roll"]
+            ps["last_roll"]=face
+
     elif face==1:
-        if ps["dice"]["name"]=="Risky":
-            ps["score"]=max(ps["score"]-6,0)
         turn_score=0; switch_player(); return
     turn_score += face
 
